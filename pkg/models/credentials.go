@@ -5,7 +5,6 @@ import (
 	"strconv"
 )
 
-// Credentials represents X10 API credentials
 type Credentials struct {
 	APIKey     string
 	PublicKey  string
@@ -13,7 +12,6 @@ type Credentials struct {
 	VaultID    int
 }
 
-// LoadCredentialsFromEnv loads credentials from environment variables
 func LoadCredentialsFromEnv() (*Credentials, error) {
 	apiKey := os.Getenv("X10_API_KEY")
 	publicKey := os.Getenv("X10_PUBLIC_KEY")

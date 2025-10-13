@@ -2,7 +2,6 @@ package models
 
 import "fmt"
 
-// X10Error represents a custom error type for the X10 SDK
 type X10Error struct {
 	Code    int    `json:"code,omitempty"`
 	Message string `json:"message"`

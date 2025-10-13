@@ -11,14 +11,12 @@ import (
 	"github.com/x10xchange/go-sdk/pkg/config"
 )
 
-// HTTPClient represents the HTTP client
 type HTTPClient struct {
 	config     *config.Config
 	httpClient *http.Client
 	apiKey     string
 }
 
-// NewHTTPClient creates a new HTTP client
 func NewHTTPClient(cfg *config.Config) *HTTPClient {
 	return &HTTPClient{
 		config: cfg,
@@ -28,7 +26,6 @@ func NewHTTPClient(cfg *config.Config) *HTTPClient {
 	}
 }
 
-// NewHTTPClientWithAPIKey creates a new HTTP client with API key
 func NewHTTPClientWithAPIKey(cfg *config.Config, apiKey string) *HTTPClient {
 	return &HTTPClient{
 		config: cfg,
@@ -39,7 +36,6 @@ func NewHTTPClientWithAPIKey(cfg *config.Config, apiKey string) *HTTPClient {
 	}
 }
 
-// Get makes a GET request to the specified endpoint
 func (c *HTTPClient) Get(ctx context.Context, endpoint string, result interface{}) error {
 	url := c.config.APIBaseURL + endpoint
 
