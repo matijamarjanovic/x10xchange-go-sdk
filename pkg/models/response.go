@@ -11,3 +11,9 @@ type MarketsResponse struct {
 	Status string   `json:"status"`
 	Data   []Market `json:"data,omitempty"`
 }
+
+// AccountResponse represents the response from the account endpoint
+type AccountResponse struct {
+	Status string  `json:"status"`
+	Data   Account `json:"data,omitempty"`
+}

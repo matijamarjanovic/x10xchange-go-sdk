@@ -15,6 +15,7 @@ import (
 type HTTPClient struct {
 	config     *config.Config
 	httpClient *http.Client
+	apiKey     string
 }
 
 // NewHTTPClient creates a new HTTP client
@@ -24,6 +25,17 @@ func NewHTTPClient(cfg *config.Config) *HTTPClient {
 		httpClient: &http.Client{
 			Timeout: 30 * time.Second,
 		},
+	}
+}
+
+// NewHTTPClientWithAPIKey creates a new HTTP client with API key
+func NewHTTPClientWithAPIKey(cfg *config.Config, apiKey string) *HTTPClient {
+	return &HTTPClient{
+		config: cfg,
+		httpClient: &http.Client{
+			Timeout: 30 * time.Second,
+		},
+		apiKey: apiKey,
 	}
 }
 
@@ -38,6 +50,10 @@ func (c *HTTPClient) Get(ctx context.Context, endpoint string, result interface{
 
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("User-Agent", "X10GoSDK/1.0")
+
+	if c.apiKey != "" {
+		req.Header.Set("X-Api-Key", c.apiKey)
+	}
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
