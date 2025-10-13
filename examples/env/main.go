@@ -31,16 +31,22 @@ func main() {
 	httpClient := client.NewHTTPClientWithAPIKey(cfg, creds.APIKey)
 
 	// Try to get account details (proper endpoint from API docs)
-	var response models.AccountResponse
+	var response models.Response
 	err = httpClient.Get(context.Background(), "/user/account/info", &response)
 	if err != nil {
 		log.Printf("Request failed: %v", err)
 	} else {
 		fmt.Printf("Account Status: %s\n", response.Status)
-		fmt.Printf("Account ID: %d\n", response.Data.AccountID)
-		fmt.Printf("Description: %s\n", response.Data.Description)
-		fmt.Printf("L2 Vault: %s\n", response.Data.L2Vault)
-		fmt.Printf("Status: %s\n", response.Data.Status)
-		fmt.Printf("API Keys: %d keys\n", len(response.Data.APIKeys))
+
+		// Cast the data to account info
+		if accountData, ok := response.Data.(map[string]interface{}); ok {
+			fmt.Printf("Account ID: %v\n", accountData["accountId"])
+			fmt.Printf("Description: %v\n", accountData["description"])
+			fmt.Printf("L2 Vault: %v\n", accountData["l2Vault"])
+			fmt.Printf("Status: %v\n", accountData["status"])
+			if apiKeys, ok := accountData["apiKeys"].([]interface{}); ok {
+				fmt.Printf("API Keys: %d keys\n", len(apiKeys))
+			}
+		}
 	}
 }

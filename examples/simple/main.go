@@ -18,19 +18,24 @@ func main() {
 	httpClient := client.NewHTTPClient(cfg)
 
 	// Make a simple request to get markets
-	var response models.MarketsResponse
+	var response models.Response
 	err := httpClient.Get(context.Background(), "/info/markets?market=BTC-USD", &response)
 	if err != nil {
 		log.Fatalf("Request failed: %v", err)
 	}
 
 	fmt.Printf("Status: %s\n", response.Status)
-	fmt.Printf("Found %d markets\n", len(response.Data))
 
-	if len(response.Data) > 0 {
-		market := response.Data[0]
-		fmt.Printf("Market: %s\n", market.Name)
-		fmt.Printf("Asset: %s\n", market.AssetName)
-		fmt.Printf("Active: %t\n", market.Active)
+	// Cast the data to markets
+	if markets, ok := response.Data.([]interface{}); ok {
+		fmt.Printf("Found %d markets\n", len(markets))
+
+		if len(markets) > 0 {
+			if marketData, ok := markets[0].(map[string]interface{}); ok {
+				fmt.Printf("Market: %v\n", marketData["name"])
+				fmt.Printf("Asset: %v\n", marketData["assetName"])
+				fmt.Printf("Active: %v\n", marketData["active"])
+			}
+		}
 	}
 }

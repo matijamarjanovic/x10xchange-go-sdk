@@ -1,4 +1,4 @@
-package models
+package private
 
 // Account represents an X10 account
 type Account struct {

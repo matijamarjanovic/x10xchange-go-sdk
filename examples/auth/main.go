@@ -19,7 +19,7 @@ func main() {
 	httpClient := client.NewHTTPClientWithAPIKey(cfg, apiKey)
 
 	// Try to get account balance (requires authentication)
-	var response models.SimpleResponse
+	var response models.Response
 	err := httpClient.Get(context.Background(), "/account/balance", &response)
 	if err != nil {
 		log.Printf("Request failed (expected with dummy API key): %v", err)

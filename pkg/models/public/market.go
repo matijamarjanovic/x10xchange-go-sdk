@@ -1,4 +1,4 @@
-package models
+package public
 
 // Market represents a trading market
 type Market struct {
