@@ -4,20 +4,21 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/x10xchange/go-sdk/pkg/config"
-	"github.com/x10xchange/go-sdk/pkg/models/public"
+	"github.com/matijamarjanovic/x10xchange-go-sdk/pkg/clients"
+	"github.com/matijamarjanovic/x10xchange-go-sdk/pkg/config"
+	"github.com/matijamarjanovic/x10xchange-go-sdk/pkg/models/public"
 )
 
 // PublicClient provides access to public market data endpoints that don't require authentication.
 // Use this client to fetch market information, order books, trades, candles, and other public data.
 // PublicClient can only be used to fetch public data, it is uncapable of making POST requests.
 type PublicClient struct {
-	httpClient *HTTPClient
+	httpClient *clients.HTTPClient
 }
 
 func NewPublicClient(cfg *config.Config) *PublicClient {
 	return &PublicClient{
-		httpClient: NewHTTPClient(cfg),
+		httpClient: clients.NewHTTPClient(cfg),
 	}
 }
 

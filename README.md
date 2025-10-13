@@ -20,8 +20,8 @@ import (
     "context"
     "log"
     
-    "github.com/x10xchange/go-sdk/pkg/client"
-    "github.com/x10xchange/go-sdk/pkg/config"
+    "github.com/matijamarjanovic/x10xchange-go-sdk/pkg/client"
+    "github.com/matijamarjanovic/x10xchange-go-sdk/pkg/config"
 )
 
 func main() {
@@ -44,7 +44,7 @@ func main() {
 ## Installation
 
 ```bash
-go get github.com/x10xchange/go-sdk
+go get github.com/matijamarjanovic/x10xchange-go-sdk
 ```
 
 ## Documentation

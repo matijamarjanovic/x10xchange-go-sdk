@@ -1,4 +1,4 @@
-package client
+package clients
 
 import (
 	"context"
@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/x10xchange/go-sdk/pkg/config"
+	"github.com/matijamarjanovic/x10xchange-go-sdk/pkg/config"
 )
 
 type HTTPClient struct {
