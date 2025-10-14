@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/matijamarjanovic/x10xchange-go-sdk/pkg/clients"
-	"github.com/matijamarjanovic/x10xchange-go-sdk/pkg/config"
-	"github.com/matijamarjanovic/x10xchange-go-sdk/pkg/models/public"
+	"github.com/matijamarjanovic/x10xchange-go-sdk/x10"
+	"github.com/matijamarjanovic/x10xchange-go-sdk/x10/clients"
+	"github.com/matijamarjanovic/x10xchange-go-sdk/x10/models/public"
 )
 
 // PublicClient provides access to public market data endpoints that don't require authentication.
@@ -14,12 +14,19 @@ import (
 // PublicClient can only be used to fetch public data, it is uncapable of making POST requests.
 type PublicClient struct {
 	httpClient *clients.HTTPClient
+	streaming  bool
 }
 
-func NewPublicClient(cfg *config.Config) *PublicClient {
+func NewPublicClient(cfg *x10.Config, enableStreaming bool) *PublicClient {
 	return &PublicClient{
 		httpClient: clients.NewHTTPClient(cfg),
+		streaming:  enableStreaming,
 	}
+}
+
+// StreamingEnabled returns whether streaming features are enabled on this client.
+func (c *PublicClient) StreamingEnabled() bool {
+	return c.streaming
 }
 
 // GetAllMarkets fetches information for all available markets.

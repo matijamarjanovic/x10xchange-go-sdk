@@ -8,16 +8,16 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/matijamarjanovic/x10xchange-go-sdk/pkg/config"
+	"github.com/matijamarjanovic/x10xchange-go-sdk/x10"
 )
 
 type HTTPClient struct {
-	config     *config.Config
+	config     *x10.Config
 	httpClient *http.Client
 	apiKey     string
 }
 
-func NewHTTPClient(cfg *config.Config) *HTTPClient {
+func NewHTTPClient(cfg *x10.Config) *HTTPClient {
 	return &HTTPClient{
 		config: cfg,
 		httpClient: &http.Client{
@@ -26,7 +26,7 @@ func NewHTTPClient(cfg *config.Config) *HTTPClient {
 	}
 }
 
-func NewHTTPClientWithAPIKey(cfg *config.Config, apiKey string) *HTTPClient {
+func NewHTTPClientWithAPIKey(cfg *x10.Config, apiKey string) *HTTPClient {
 	return &HTTPClient{
 		config: cfg,
 		httpClient: &http.Client{

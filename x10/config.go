@@ -1,4 +1,4 @@
-package config
+package x10
 
 import (
 	"os"
@@ -15,7 +15,6 @@ type Config struct {
 
 // LoadFromEnv loads configuration from environment variables
 func LoadFromEnv() (*Config, error) {
-	// Load .env file if it exists
 	godotenv.Load()
 
 	env := getEnvOrDefault("X10_ENVIRONMENT", "testnet")

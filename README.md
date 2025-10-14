@@ -1,4 +1,4 @@
-# X10 Extended Exchange Go SDK
+.........# X10 Extended Exchange Go SDK
 
 A Go SDK for the X10 Extended Exchange API, providing comprehensive trading functionality for perpetual futures.
 
