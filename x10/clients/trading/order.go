@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/matijamarjanovic/x10xchange-go-sdk/x10/models/user"
+	"github.com/matijamarjanovic/x10xchange-go-sdk/x10/utils/starknet"
 	"github.com/shopspring/decimal"
 )
 
@@ -94,15 +95,45 @@ func (c *TradingClient) buildAndSubmitLimitOrder(ctx context.Context, market, si
 		}
 	}
 
-	if c.signer == nil {
-		return nil, fmt.Errorf("no signer configured on TradingClient")
+	if c.account == nil {
+		return nil, fmt.Errorf("no Starknet account configured on TradingClient")
 	}
-	settlement, nonce, err := c.signer.SignOrder(ctx, SignInputs{
-		Market: market, Type: "LIMIT", Side: side, Qty: qty, Price: price, Fee: fee, ExpireAtMs: expireMs, PostOnly: opts.PostOnly,
-	})
+
+	// 1. Fetch market data for the specific market (with caching)
+	marketData, err := c.fetchMarketData(ctx, market)
 	if err != nil {
-		return nil, fmt.Errorf("signing failed: %w", err)
+		return nil, fmt.Errorf("failed to fetch market data for %s: %w", market, err)
 	}
+
+	// 2. Generate nonce (0 to 2^31 - 1, like Python SDK)
+	nonce, err := starknet.GenerateNonce()
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate nonce: %w", err)
+	}
+
+	// 3. Create order hash using market data
+	orderHash, err := starknet.CreateOrderHash(marketData, "LIMIT", side, qty, price, fee, expireMs, nonce)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create order hash: %w", err)
+	}
+
+	// 4. Sign the hash using the embedded account (just like curve.Sign)
+	r, s, err := c.account.Sign(orderHash)
+	if err != nil {
+		return nil, fmt.Errorf("failed to sign order: %w", err)
+	}
+
+	// 5. Create settlement from signature components
+	settlement := user.Settlement{
+		Signature: user.SettlementSignature{
+			R: fmt.Sprintf("0x%x", r),
+			S: fmt.Sprintf("0x%x", s),
+		},
+		StarkKey:           c.account.GetPublicKeyHex(),
+		CollateralPosition: c.account.GetVaultIDString(), //todo
+	}
+
+	nonceStr := fmt.Sprintf("%d", nonce)
 
 	req := user.CreateOrderRequest{
 		ID:                       fmt.Sprintf("%d", time.Now().UnixNano()),
@@ -115,7 +146,7 @@ func (c *TradingClient) buildAndSubmitLimitOrder(ctx context.Context, market, si
 		ExpiryEpochMillis:        expireMs,
 		Fee:                      fee,
 		Settlement:               settlement,
-		Nonce:                    nonce,
+		Nonce:                    nonceStr,
 		SelfTradeProtectionLevel: "ACCOUNT",
 		ReduceOnly:               opts.ReduceOnly,
 		PostOnly:                 opts.PostOnly,
