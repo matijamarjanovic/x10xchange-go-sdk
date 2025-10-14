@@ -264,3 +264,130 @@ func (c *TradingClient) GetOrdersHistory(
 	}
 	return response.Data, &response.Pagination, nil
 }
+
+// GetTrades returns trades history with optional filters and pagination.
+// Filters: markets..., typeFilter (TRADE | LIQUIDATION | DELEVERAGE), sideFilter (BUY | SELL); pagination via cursor, limit.
+func (c *TradingClient) GetTrades(
+	ctx context.Context,
+	typeFilter, sideFilter *string,
+	cursor *int64,
+	limit *int,
+	markets ...string,
+) ([]user.Trade, *user.Pagination, error) {
+	base := "/user/trades"
+	q := url.Values{}
+	for _, m := range markets {
+		if m != "" {
+			q.Add("market", m)
+		}
+	}
+	if typeFilter != nil && *typeFilter != "" {
+		q.Set("type", *typeFilter)
+	}
+	if sideFilter != nil && *sideFilter != "" {
+		q.Set("side", *sideFilter)
+	}
+	if cursor != nil {
+		q.Set("cursor", strconv.FormatInt(*cursor, 10))
+	}
+	if limit != nil {
+		q.Set("limit", strconv.Itoa(*limit))
+	}
+	endpoint := base
+	if encoded := q.Encode(); encoded != "" {
+		endpoint = base + "?" + encoded
+	}
+
+	var response struct {
+		Status     string          `json:"status"`
+		Data       []user.Trade    `json:"data"`
+		Pagination user.Pagination `json:"pagination"`
+	}
+
+	if err := c.httpClient.Get(ctx, endpoint, &response); err != nil {
+		return nil, nil, fmt.Errorf("failed to get trades: %w", err)
+	}
+	return response.Data, &response.Pagination, nil
+}
+
+// GetFundingPayments returns funding payments history with optional filters and pagination.
+// fromTime is required (epoch milliseconds); markets optional; side optional (LONG | SHORT).
+func (c *TradingClient) GetFundingPayments(
+	ctx context.Context,
+	fromTime int64,
+	side *string,
+	cursor *int64,
+	limit *int,
+	markets ...string,
+) ([]user.FundingPayment, *user.Pagination, error) {
+	base := "/user/funding/history"
+	q := url.Values{}
+	q.Set("fromTime", strconv.FormatInt(fromTime, 10))
+	for _, m := range markets {
+		if m != "" {
+			q.Add("market", m)
+		}
+	}
+	if side != nil && *side != "" {
+		q.Set("side", *side)
+	}
+	if cursor != nil {
+		q.Set("cursor", strconv.FormatInt(*cursor, 10))
+	}
+	if limit != nil {
+		q.Set("limit", strconv.Itoa(*limit))
+	}
+	endpoint := base + "?" + q.Encode()
+
+	var response struct {
+		Status     string                `json:"status"`
+		Data       []user.FundingPayment `json:"data"`
+		Pagination user.Pagination       `json:"pagination"`
+	}
+
+	if err := c.httpClient.Get(ctx, endpoint, &response); err != nil {
+		return nil, nil, fmt.Errorf("failed to get funding payments: %w", err)
+	}
+	return response.Data, &response.Pagination, nil
+}
+
+// GetRebatesStats returns rebate-related stats for the authenticated sub-account.
+func (c *TradingClient) GetRebatesStats(ctx context.Context) ([]user.RebatesStats, error) {
+	endpoint := "/user/rebates/stats"
+
+	var response struct {
+		Status string              `json:"status"`
+		Data   []user.RebatesStats `json:"data"`
+	}
+
+	if err := c.httpClient.Get(ctx, endpoint, &response); err != nil {
+		return nil, fmt.Errorf("failed to get rebates stats: %w", err)
+	}
+	return response.Data, nil
+}
+
+// GetFees returns current fee rates for the sub-account; optionally filter by market and/or builderId.
+func (c *TradingClient) GetFees(ctx context.Context, market *string, builderID *string) ([]user.Fee, error) {
+	base := "/user/fees"
+	q := url.Values{}
+	if market != nil && *market != "" {
+		q.Set("market", *market)
+	}
+	if builderID != nil && *builderID != "" {
+		q.Set("builderId", *builderID)
+	}
+	endpoint := base
+	if encoded := q.Encode(); encoded != "" {
+		endpoint = base + "?" + encoded
+	}
+
+	var response struct {
+		Status string     `json:"status"`
+		Data   []user.Fee `json:"data"`
+	}
+
+	if err := c.httpClient.Get(ctx, endpoint, &response); err != nil {
+		return nil, fmt.Errorf("failed to get fees: %w", err)
+	}
+	return response.Data, nil
+}
