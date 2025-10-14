@@ -86,14 +86,23 @@ func (c *TradingClient) buildAndSubmitLimitOrder(ctx context.Context, market, si
 	}
 	expireMs := time.Now().Add(opts.ExpireIn).UnixMilli()
 
-	fee := opts.BuilderFee
-	if fee == "" {
+	feeRate := opts.BuilderFee
+	if feeRate == "" {
 		if opts.PostOnly {
-			fee = "0.00000"
+			feeRate = "0.0002" // 0.02% maker fee (2/10000)
 		} else {
-			fee = "0.00025"
+			feeRate = "0.0005" // 0.05% taker fee (5/10000)
 		}
 	}
+
+	// Calculate actual fee amount as fee_rate * collateral_amount (qty * price)
+	qtyDecimal, _ := decimal.NewFromString(qty)
+	priceDecimal, _ := decimal.NewFromString(price)
+	feeRateDecimal, _ := decimal.NewFromString(feeRate)
+
+	collateralAmount := qtyDecimal.Mul(priceDecimal)  // 0.001 * 50000 = 50
+	feeAmount := feeRateDecimal.Mul(collateralAmount) // 0.0005 * 50 = 0.025
+	fee := feeAmount.String()
 
 	if c.account == nil {
 		return nil, fmt.Errorf("no Starknet account configured on TradingClient")
@@ -112,7 +121,7 @@ func (c *TradingClient) buildAndSubmitLimitOrder(ctx context.Context, market, si
 	}
 
 	// 3. Create order hash using market data
-	orderHash, err := starknet.CreateOrderHash(marketData, "LIMIT", side, qty, price, fee, expireMs, nonce)
+	orderHash, err := starknet.CreateOrderHash(marketData, "LIMIT", side, qty, price, fee, expireMs, nonce, c.account.Vault)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create order hash: %w", err)
 	}

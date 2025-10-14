@@ -49,6 +49,8 @@ func (c *HTTPClient) Post(ctx context.Context, endpoint string, payload interfac
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		fmt.Printf("Error response body: %s\n", string(body))
 		return fmt.Errorf("request failed with status: %d", resp.StatusCode)
 	}
 
