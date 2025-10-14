@@ -1,4 +1,4 @@
-package public
+package info
 
 // Market represents a trading market
 type Market struct {
