@@ -35,7 +35,7 @@ func main() {
 
 	// Test order creation parameters
 	market := "BTC-USD"
-	qty := decimal.NewFromFloat(0.001) // Small amount for testing
+	qty := decimal.NewFromFloat(0.0001) // Small amount for testing
 	price := decimal.NewFromFloat(50000)
 
 	fmt.Printf("\nAttempting to place order:\n")

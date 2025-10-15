@@ -3,9 +3,11 @@ package starknet
 import (
 	"crypto/rand"
 	"fmt"
+	"math"
 	"math/big"
 	"time"
 
+	felt "github.com/NethermindEth/juno/core/felt"
 	"github.com/NethermindEth/starknet.go/curve"
 	"github.com/matijamarjanovic/x10xchange-go-sdk/x10/models/info"
 	"github.com/shopspring/decimal"
@@ -32,7 +34,7 @@ const (
 
 // CreateOrderHash creates the order hash using market data
 // This implements the same logic as Python SDK's hash_order function
-func CreateOrderHash(market *info.Market, orderType, side, qty, price, fee string, expireAtMs int64, nonce int64, vaultID int) (*big.Int, error) {
+func CreateOrderHash(market *info.Market, orderType, side, qty, price, fee string, expireAtMs int64, nonce int64, vaultID int) (*felt.Felt, error) {
 	// 1. Extract asset IDs and resolutions from market l2Config
 	syntheticAssetID, collateralAssetID, syntheticResolution, collateralResolution, err := extractAssetData(market)
 	if err != nil {
@@ -40,15 +42,17 @@ func CreateOrderHash(market *info.Market, orderType, side, qty, price, fee strin
 	}
 
 	// 2. Convert decimal amounts to Stark amounts using settlement resolution
-	qtyStark, err := convertToStarkAmount(qty, syntheticResolution)
+	qtyStarkFelt, err := convertToStarkAmount(qty, syntheticResolution)
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert qty to Stark amount: %w", err)
 	}
+	qtyStark := qtyStarkFelt.BigInt(new(big.Int))
 
-	feeStark, err := convertToStarkAmount(fee, collateralResolution)
+	feeStarkFelt, err := convertToStarkAmount(fee, collateralResolution)
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert fee to Stark amount: %w", err)
 	}
+	feeStark := feeStarkFelt.BigInt(new(big.Int))
 
 	// 3. Determine if buying synthetic (1) or selling (0)
 	isBuyingSynthetic := side == "BUY"
@@ -62,16 +66,14 @@ func CreateOrderHash(market *info.Market, orderType, side, qty, price, fee strin
 	collateralAmountStark := collateralAmountHuman.Mul(decimal.NewFromInt(int64(collateralResolution)))
 	collateralStark := collateralAmountStark.BigInt()
 
-	// 5. Calculate expiration timestamp in hours (like Python SDK)
+	// 5. Calculate expiration timestamp in HOURS
 	expireTime := time.UnixMilli(expireAtMs)
 	expireTimeWithBuffer := expireTime.AddDate(0, 0, 14) // Add 14 days buffer
+	expireTimeInHours := int64(math.Ceil(float64(expireTimeWithBuffer.Unix()) / float64(SecondsInHour)))
 
 	// 6. Use the exact hashing logic from get_limit_order_msg_without_bounds
 	// Position ID should be vault ID, not collateral asset ID
 	positionID := int64(vaultID)
-
-	// Convert expiration to seconds instead of hours
-	expireTimeInSeconds := expireTimeWithBuffer.Unix()
 
 	hash := getLimitOrderMsg(
 		syntheticAssetID,
@@ -83,7 +85,7 @@ func CreateOrderHash(market *info.Market, orderType, side, qty, price, fee strin
 		feeStark,
 		nonce,
 		positionID,
-		expireTimeInSeconds, // Use seconds instead of hours
+		expireTimeInHours, // Use hours like Python SDK
 	)
 
 	return hash, nil
@@ -96,7 +98,7 @@ func getLimitOrderMsg(
 	assetIDFee *big.Int,
 	amountSynthetic, amountCollateral, maxAmountFee *big.Int,
 	nonce, positionID, expirationTimestamp int64,
-) *big.Int {
+) *felt.Felt {
 	var assetIDSell, assetIDBuy, amountSell, amountBuy *big.Int
 
 	if isBuyingSynthetic {
@@ -107,12 +109,11 @@ func getLimitOrderMsg(
 		amountSell, amountBuy = amountSynthetic, amountCollateral
 	}
 
-	// First hash: asset_id_sell, asset_id_buy
-	// Use HashPedersenElements for two elements to match Python SDK's pedersen_hash(a, b)
-	msg := curve.HashPedersenElements([]*big.Int{assetIDSell, assetIDBuy})
+	// First hash: asset_id_sell, asset_id_buy (using curve.Pedersen with felt.Felt)
+	msg := curve.Pedersen(bigIntToFelt(assetIDSell), bigIntToFelt(assetIDBuy))
 
 	// Second hash: msg, asset_id_fee
-	msg = curve.HashPedersenElements([]*big.Int{msg, assetIDFee})
+	msg = curve.Pedersen(msg, bigIntToFelt(assetIDFee))
 
 	packedMessage0 := new(big.Int).Set(amountSell)
 	packedMessage0.Lsh(packedMessage0, 64)                // packed_message0 * 2^64
@@ -123,7 +124,7 @@ func getLimitOrderMsg(
 	packedMessage0.Add(packedMessage0, big.NewInt(nonce)) // + nonce
 
 	// Third hash: msg, packed_message0
-	msg = curve.HashPedersenElements([]*big.Int{msg, packedMessage0})
+	msg = curve.Pedersen(msg, bigIntToFelt(packedMessage0))
 
 	packedMessage1 := big.NewInt(OPLimitOrderWithFees)
 	packedMessage1.Lsh(packedMessage1, 64)                              // packed_message1 * 2^64
@@ -137,5 +138,5 @@ func getLimitOrderMsg(
 	packedMessage1.Lsh(packedMessage1, 17)                              // * 2^17 (Padding)
 
 	// Final hash: msg, packed_message1
-	return curve.HashPedersenElements([]*big.Int{msg, packedMessage1})
+	return curve.Pedersen(msg, bigIntToFelt(packedMessage1))
 }

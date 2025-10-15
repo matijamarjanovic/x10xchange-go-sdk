@@ -95,14 +95,7 @@ func (c *TradingClient) buildAndSubmitLimitOrder(ctx context.Context, market, si
 		}
 	}
 
-	// Calculate actual fee amount as fee_rate * collateral_amount (qty * price)
-	qtyDecimal, _ := decimal.NewFromString(qty)
-	priceDecimal, _ := decimal.NewFromString(price)
-	feeRateDecimal, _ := decimal.NewFromString(feeRate)
-
-	collateralAmount := qtyDecimal.Mul(priceDecimal)  // 0.001 * 50000 = 50
-	feeAmount := feeRateDecimal.Mul(collateralAmount) // 0.0005 * 50 = 0.025
-	fee := feeAmount.String()
+	fee := feeRate
 
 	if c.account == nil {
 		return nil, fmt.Errorf("no Starknet account configured on TradingClient")

@@ -6,6 +6,7 @@ import (
 	"os"
 	"strconv"
 
+	felt "github.com/NethermindEth/juno/core/felt"
 	"github.com/NethermindEth/starknet.go/curve"
 	"github.com/matijamarjanovic/x10xchange-go-sdk/x10/models"
 )
@@ -71,13 +72,16 @@ func NewStarknetAccount() (*StarknetAccount, error) {
 
 // Sign signs a message hash using the account's private key
 // This is the Go equivalent of Python's account.sign() method
-// Returns r, s signature components just like curve.Sign
-func (a *StarknetAccount) Sign(msgHash *big.Int) (*big.Int, *big.Int, error) {
-	r, s, err := curve.Sign(msgHash, a.PrivateKey)
+// Returns r, s signature components as *big.Int for easy hex formatting
+func (a *StarknetAccount) Sign(msgHash *felt.Felt) (*big.Int, *big.Int, error) {
+	privateKeyFelt := new(felt.Felt).SetBigInt(a.PrivateKey)
+	r, s, err := curve.SignFelts(msgHash, privateKeyFelt)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to sign message hash: %w", err)
 	}
-	return r, s, nil
+	rBigInt := r.BigInt(new(big.Int))
+	sBigInt := s.BigInt(new(big.Int))
+	return rBigInt, sBigInt, nil
 }
 
 // GetPublicKeyHex returns the public key as a hex string
