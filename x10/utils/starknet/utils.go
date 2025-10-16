@@ -6,7 +6,6 @@ import (
 
 	felt "github.com/NethermindEth/juno/core/felt"
 	"github.com/matijamarjanovic/x10xchange-go-sdk/x10/models/info"
-	"github.com/shopspring/decimal"
 )
 
 // extractAssetData extracts synthetic and collateral asset IDs along with their settlement resolutions
@@ -47,32 +46,17 @@ func extractAssetData(market *info.Market) (syntheticAssetID, collateralAssetID 
 	return syntheticAssetID, collateralAssetID, syntheticResolution, collateralResolution, nil
 }
 
-// convertToStarkAmount converts a human-readable decimal amount to Stark's internal integer representation
-// by multiplying with the settlement resolution. Returns a felt.Felt for cryptographic operations.
-func convertToStarkAmount(decimalStr string, resolution int) (*felt.Felt, error) {
-	dec, err := decimal.NewFromString(decimalStr)
-	if err != nil {
-		return nil, fmt.Errorf("invalid decimal string: %s", decimalStr)
+// bigIntToFelt converts a big.Int to a felt.Felt, returning an error if the value
+// is negative or greater than or equal to the Stark field prime. No modulo is applied.
+func bigIntToFelt(x *big.Int) (*felt.Felt, error) {
+	if x == nil {
+		return nil, fmt.Errorf("nil big.Int")
 	}
-
-	resolutionDecimal := decimal.NewFromInt(int64(resolution))
-	result := dec.Mul(resolutionDecimal)
-
-	resultInt := result.BigInt()
-
-	return bigIntToFelt(resultInt), nil
-}
-
-// bigIntToFelt converts a big.Int to a felt.Felt by reducing it modulo the Stark field prime.
-// This ensures values stay within the Stark field bounds (uint256-like) and prevents overflow
-// in cryptographic operations. Handles negative numbers by adding the field prime.
-func bigIntToFelt(x *big.Int) *felt.Felt {
 	p, _ := new(big.Int).SetString("0x800000000000011000000000000000000000000000000000000000000000001", 0)
-	mod := new(big.Int).Mod(new(big.Int).Set(x), p)
-	if mod.Sign() < 0 {
-		mod.Add(mod, p)
+	if x.Sign() < 0 || x.Cmp(p) >= 0 {
+		return nil, fmt.Errorf("value %s out of field range", x.String())
 	}
 	f := new(felt.Felt)
-	f.SetBigInt(mod)
-	return f
+	f.SetBigInt(x)
+	return f, nil
 }

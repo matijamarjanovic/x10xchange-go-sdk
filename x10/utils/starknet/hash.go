@@ -13,92 +13,81 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-// GenerateNonce generates a random nonce (0 to 2^31 - 1, like Python SDK)
-// This matches the Python SDK's nonce generation logic
-func GenerateNonce() (int64, error) {
-	// Generate a random number between 0 and 2^31 - 1
-	max := big.NewInt(1 << 31) // 2^31
-	nonce, err := rand.Int(rand.Reader, max)
-	if err != nil {
-		return 0, fmt.Errorf("failed to generate nonce: %w", err)
-	}
-	return nonce.Int64(), nil
-}
-
-// Constants from Python SDK
 const (
 	OPLimitOrderWithFees = 3
 	HoursInDay           = 24
 	SecondsInHour        = 60 * 60
 )
 
-// CreateOrderHash creates the order hash using market data
-// This implements the same logic as Python SDK's hash_order function
-func CreateOrderHash(market *info.Market, orderType, side, qty, price, fee string, expireAtMs int64, nonce int64, vaultID int) (*felt.Felt, error) {
-	// 1. Extract asset IDs and resolutions from market l2Config
+// HashOrder constructs the canonical order hash from the provided market and order parameters.
+// It derives synthetic and collateral amounts in human units, computes the fee amount from feeRate,
+// converts these values to internal integers using the market resolutions, then packs fields and hashes them.
+// The feeRate is a decimal string (e.g., "0.0005" for 0.05%).
+func HashOrder(market *info.Market, side, qty, price, feeRate string, expireAtMs int64, nonce int64, vaultID int) (*felt.Felt, error) {
 	syntheticAssetID, collateralAssetID, syntheticResolution, collateralResolution, err := extractAssetData(market)
 	if err != nil {
 		return nil, fmt.Errorf("failed to extract asset data: %w", err)
 	}
 
-	// 2. Convert decimal amounts to Stark amounts using settlement resolution
-	qtyStarkFelt, err := convertToStarkAmount(qty, syntheticResolution)
+	qtyDecimal, err := decimal.NewFromString(qty)
 	if err != nil {
-		return nil, fmt.Errorf("failed to convert qty to Stark amount: %w", err)
+		return nil, fmt.Errorf("invalid qty: %w", err)
 	}
-	qtyStark := qtyStarkFelt.BigInt(new(big.Int))
-
-	feeStarkFelt, err := convertToStarkAmount(fee, collateralResolution)
+	priceDecimal, err := decimal.NewFromString(price)
 	if err != nil {
-		return nil, fmt.Errorf("failed to convert fee to Stark amount: %w", err)
+		return nil, fmt.Errorf("invalid price: %w", err)
 	}
-	feeStark := feeStarkFelt.BigInt(new(big.Int))
+	feeRateDec, err := decimal.NewFromString(feeRate)
+	if err != nil {
+		return nil, fmt.Errorf("invalid fee rate: %w", err)
+	}
 
-	// 3. Determine if buying synthetic (1) or selling (0)
+	qtyStark := qtyDecimal.Mul(decimal.NewFromInt(int64(syntheticResolution))).BigInt()
+
+	collateralAmountHuman := qtyDecimal.Mul(priceDecimal)
+	collateralStark := collateralAmountHuman.Mul(decimal.NewFromInt(int64(collateralResolution))).BigInt()
+
+	feeAmountHuman := feeRateDec.Mul(collateralAmountHuman)
+	feeStark := feeAmountHuman.Mul(decimal.NewFromInt(int64(collateralResolution))).BigInt()
+
+	if side != "BUY" && side != "SELL" {
+		return nil, fmt.Errorf("invalid side: %s, must be BUY or SELL", side)
+	}
 	isBuyingSynthetic := side == "BUY"
 
-	// 4. Calculate collateral amount (qty * price) in human-readable form first
-	qtyDecimal, _ := decimal.NewFromString(qty)
-	priceDecimal, _ := decimal.NewFromString(price)
-	collateralAmountHuman := qtyDecimal.Mul(priceDecimal) // 0.001 * 50000 = 50
-
-	// Convert to Stark amount using collateral resolution
-	collateralAmountStark := collateralAmountHuman.Mul(decimal.NewFromInt(int64(collateralResolution)))
-	collateralStark := collateralAmountStark.BigInt()
-
-	// 5. Calculate expiration timestamp in HOURS
 	expireTime := time.UnixMilli(expireAtMs)
-	expireTimeWithBuffer := expireTime.AddDate(0, 0, 14) // Add 14 days buffer
+	expireTimeWithBuffer := expireTime.AddDate(0, 0, 14)
 	expireTimeInHours := int64(math.Ceil(float64(expireTimeWithBuffer.Unix()) / float64(SecondsInHour)))
 
-	// 6. Use the exact hashing logic from get_limit_order_msg_without_bounds
-	// Position ID should be vault ID, not collateral asset ID
 	positionID := int64(vaultID)
 
-	hash := getLimitOrderMsg(
+	hash, err := getLimitOrderMsg(
 		syntheticAssetID,
 		collateralAssetID,
 		isBuyingSynthetic,
-		collateralAssetID, // Fee asset is same as collateral
+		collateralAssetID,
 		qtyStark,
 		collateralStark,
 		feeStark,
 		nonce,
 		positionID,
-		expireTimeInHours, // Use hours like Python SDK
+		expireTimeInHours,
 	)
+	if err != nil {
+		return nil, err
+	}
 
 	return hash, nil
 }
 
-// getLimitOrderMsg implements the exact logic from Python SDK's get_limit_order_msg_without_bounds
+// getLimitOrderMsg packs the order fields and performs the pairwise Pedersen hash chaining.
 func getLimitOrderMsg(
 	assetIDSynthetic, assetIDCollateral *big.Int,
 	isBuyingSynthetic bool,
 	assetIDFee *big.Int,
 	amountSynthetic, amountCollateral, maxAmountFee *big.Int,
 	nonce, positionID, expirationTimestamp int64,
-) *felt.Felt {
+) (*felt.Felt, error) {
 	var assetIDSell, assetIDBuy, amountSell, amountBuy *big.Int
 
 	if isBuyingSynthetic {
@@ -110,10 +99,22 @@ func getLimitOrderMsg(
 	}
 
 	// First hash: asset_id_sell, asset_id_buy (using curve.Pedersen with felt.Felt)
-	msg := curve.Pedersen(bigIntToFelt(assetIDSell), bigIntToFelt(assetIDBuy))
+	fsell, err := bigIntToFelt(assetIDSell)
+	if err != nil {
+		return nil, err
+	}
+	fbuy, err := bigIntToFelt(assetIDBuy)
+	if err != nil {
+		return nil, err
+	}
+	msg := curve.Pedersen(fsell, fbuy)
 
 	// Second hash: msg, asset_id_fee
-	msg = curve.Pedersen(msg, bigIntToFelt(assetIDFee))
+	ffee, err := bigIntToFelt(assetIDFee)
+	if err != nil {
+		return nil, err
+	}
+	msg = curve.Pedersen(msg, ffee)
 
 	packedMessage0 := new(big.Int).Set(amountSell)
 	packedMessage0.Lsh(packedMessage0, 64)                // packed_message0 * 2^64
@@ -124,7 +125,11 @@ func getLimitOrderMsg(
 	packedMessage0.Add(packedMessage0, big.NewInt(nonce)) // + nonce
 
 	// Third hash: msg, packed_message0
-	msg = curve.Pedersen(msg, bigIntToFelt(packedMessage0))
+	fpm0, err := bigIntToFelt(packedMessage0)
+	if err != nil {
+		return nil, err
+	}
+	msg = curve.Pedersen(msg, fpm0)
 
 	packedMessage1 := big.NewInt(OPLimitOrderWithFees)
 	packedMessage1.Lsh(packedMessage1, 64)                              // packed_message1 * 2^64
@@ -138,5 +143,20 @@ func getLimitOrderMsg(
 	packedMessage1.Lsh(packedMessage1, 17)                              // * 2^17 (Padding)
 
 	// Final hash: msg, packed_message1
-	return curve.Pedersen(msg, bigIntToFelt(packedMessage1))
+	fpm1, err := bigIntToFelt(packedMessage1)
+	if err != nil {
+		return nil, err
+	}
+	return curve.Pedersen(msg, fpm1), nil
+}
+
+// GenerateNonce returns a uniformly random nonce in the range [0, 2^31).
+// This is suitable for order uniqueness and replay protection.
+func GenerateNonce() (int64, error) {
+	max := big.NewInt(1 << 31)
+	nonce, err := rand.Int(rand.Reader, max)
+	if err != nil {
+		return 0, fmt.Errorf("failed to generate nonce: %w", err)
+	}
+	return nonce.Int64(), nil
 }

@@ -45,12 +45,12 @@ func (c *TradingClient) StreamingEnabled() bool {
 }
 
 // GetAccount returns the embedded Starknet account
-func (c *TradingClient) GetAccount() *starknet.StarknetAccount {
+func (c *TradingClient) Account() *starknet.StarknetAccount {
 	return c.account
 }
 
 // fetchMarketData fetches market data for a specific market (with caching)
-func (c *TradingClient) fetchMarketData(ctx context.Context, marketName string) (*info.Market, error) {
+func (c *TradingClient) FetchMarketData(ctx context.Context, marketName string) (*info.Market, error) {
 	if market, exists := c.markets[marketName]; exists {
 		return market, nil
 	}

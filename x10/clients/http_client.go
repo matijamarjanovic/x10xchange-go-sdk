@@ -30,6 +30,11 @@ func (c *HTTPClient) Post(ctx context.Context, endpoint string, payload interfac
 		}
 	}
 
+	// Debug: print order POST body for comparison
+	if endpoint == "/user/order" {
+		fmt.Printf("Go Order JSON: %s\n", string(bodyBytes))
+	}
+
 	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(bodyBytes))
 	if err != nil {
 		return fmt.Errorf("failed to create request: %w", err)
