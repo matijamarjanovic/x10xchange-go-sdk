@@ -3,7 +3,6 @@ import logging
 import logging.config
 import logging.handlers
 import os
-import random
 from asyncio import run
 from decimal import Decimal
 
@@ -25,6 +24,7 @@ PUBLIC_KEY = os.getenv("X10_PUBLIC_KEY")
 PRIVATE_KEY = os.getenv("X10_PRIVATE_KEY")
 VAULT_ID = int(os.environ["X10_VAULT_ID"])
 
+
 async def clean_it(trading_client: PerpetualTradingClient):
     logger = logging.getLogger("placed_order_example")
     positions = await trading_client.account.get_positions()
@@ -36,11 +36,6 @@ async def clean_it(trading_client: PerpetualTradingClient):
 
 
 async def setup_and_run():
-    assert API_KEY is not None
-    assert PUBLIC_KEY is not None
-    assert PRIVATE_KEY is not None
-    assert VAULT_ID is not None
-
     stark_account = StarkPerpetualAccount(
         vault=VAULT_ID,
         private_key=PRIVATE_KEY,
@@ -87,17 +82,15 @@ async def setup_and_run():
                         baseline_price.price + offset * baseline_price.price * Decimal("0.002"),
                         1,
                     )
-                    external_id = str(random.randint(1, 10000000000000000000000000000000000000000000000000000000000))
                     placed_order = await blocking_client.create_and_place_order(
                         market_name="BTC-USD",
                         amount_of_synthetic=Decimal("0.01"),
                         price=order_price,
                         side=side,
                         post_only=True,
-                        external_id=external_id,
                     )
                     print(f"baseline: {baseline_price.price}, order: {order_price}, id: {placed_order.id}")
-                    await blocking_client.cancel_order(order_external_id=external_id)
+                    await blocking_client.cancel_order(order_id=placed_order.id)
                     await asyncio.sleep(0)
                 else:
                     await asyncio.sleep(1)
@@ -106,6 +99,11 @@ async def setup_and_run():
 
     sell_tasks = list(map(lambda idx: order_loop(idx, OrderSide.SELL), range(NUM_PRICE_LEVELS)))
     buy_tasks = list(map(lambda idx: order_loop(idx, OrderSide.BUY), range(NUM_PRICE_LEVELS)))
+
+    for task in sell_tasks:
+        print(await task)
+    for task in buy_tasks:
+        print(await task)
 
 
 if __name__ == "__main__":

@@ -1,0 +1,33 @@
+[build-system]
+requires = ["poetry-core>=1.7.0"]
+build-backend = "poetry.core.masonry.api"
+
+
+[tool.poetry]
+name = "x10-python-trading"
+version = "0.4.5"
+description = "Python client for X10 API"
+authors = ["X10 <tech@ex10.org>"]
+repository = "https://github.com/x10xchange/python_sdk"
+documentation = "https://api.docs.extended.exchange/"
+readme = "README.md"
+classifiers = [
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+packages = [
+    { include = "vendor" },
+    { include = "x10" },
+]
+
+[tool.poetry.dependencies]
+ecdsa = "==0.18.0"
+fast-stark-crypto = "==0.1.0"
+mpmath = "==1.3.0"
+python = "^3.10"
+sympy = "==1.12"
+

@@ -18,7 +18,7 @@ const (
 	SecondsInHour        = 60 * 60
 )
 
-//todo: add godocs 
+// todo: add godocs
 func HashOrder(amounts models.StarkOrderAmounts, isBuyingSynthetic bool, expireTime *time.Time, nonce int64, vaultID int) (*felt.Felt, error) {
 	syntheticStark := amounts.SyntheticAmountInternal.ToStarkAmount(amounts.RoundingMode)
 	collateralStark := amounts.CollateralAmountInternal.ToStarkAmount(amounts.RoundingMode)

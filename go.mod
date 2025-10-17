@@ -12,6 +12,7 @@ require (
 
 require (
 	github.com/bits-and-blooms/bitset v1.24.0 // indirect
+	github.com/codahale/rfc6979 v0.0.0-20141003034818-6a90f24967eb // indirect
 	github.com/consensys/gnark-crypto v0.18.0 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/fxamacker/cbor/v2 v2.9.0 // indirect

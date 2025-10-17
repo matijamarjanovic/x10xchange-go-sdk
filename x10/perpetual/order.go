@@ -111,8 +111,13 @@ func createOrder(
 
 	amounts := models.NewStarkOrderAmounts(market, syntheticAmount, price, fees.TakerFeeRate, isBuyingSynthetic)
 
-	debuggingAmounts := &user.DebuggingAmounts{ //todo decimal?
-		CollateralAmount: decimal.NewFromBigInt(amounts.CollateralAmountInternal.ToStarkAmount(amounts.RoundingMode).Value, 0),
+	collateralAmountDebug := decimal.NewFromBigInt(amounts.CollateralAmountInternal.ToStarkAmount(amounts.RoundingMode).Value, 0)
+	if isBuyingSynthetic {
+		collateralAmountDebug = collateralAmountDebug.Neg()
+	}
+
+	debuggingAmounts := &user.DebuggingAmounts{
+		CollateralAmount: collateralAmountDebug,
 		FeeAmount:        decimal.NewFromBigInt(amounts.FeeAmountInternal.ToStarkAmount(amounts.RoundingMode).Value, 0),
 		SyntheticAmount:  decimal.NewFromBigInt(amounts.SyntheticAmountInternal.ToStarkAmount(amounts.RoundingMode).Value, 0),
 	}
@@ -140,7 +145,9 @@ func createOrder(
 	if orderExternalID != nil {
 		orderID = *orderExternalID
 	} else {
-		orderID = ""
+		orderHashBigInt := new(big.Int)
+		orderHash.BigInt(orderHashBigInt)
+		orderID = orderHashBigInt.String()
 	}
 
 	req := user.CreateOrderRequest{
