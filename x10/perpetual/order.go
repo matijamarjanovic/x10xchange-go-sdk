@@ -42,12 +42,8 @@ func CreateOrder(
 	}
 
 	fees := account.TradingFees[market.Name]
-	if fees == (user.Fee{}) {
-		fees = user.Fee{
-			Market:       market.Name,
-			TakerFeeRate: "0.00025",
-			MakerFeeRate: "0.0000",
-		}
+	if fees == (user.TradingFee{}) {
+		fees = user.DefaultFees
 	}
 
 	return createOrder(
@@ -76,7 +72,7 @@ func createOrder(
 	price decimal.Decimal,
 	side string,
 	collateralPositionID int,
-	fees user.Fee,
+	fees user.TradingFee,
 	signer func(*felt.Felt) (*big.Int, *big.Int, error),
 	publicKey *big.Int,
 	exactOnly bool,
@@ -111,14 +107,9 @@ func createOrder(
 		return nil, fmt.Errorf("failed to generate nonce: %w", err)
 	}
 
-	feeRate, err := decimal.NewFromString(fees.TakerFeeRate)
-	if err != nil {
-		return nil, fmt.Errorf("invalid fee rate: %w", err)
-	}
-
 	isBuyingSynthetic := side == "BUY"
 
-	amounts := models.NewStarkOrderAmounts(market, syntheticAmount, price, feeRate, isBuyingSynthetic)
+	amounts := models.NewStarkOrderAmounts(market, syntheticAmount, price, fees.TakerFeeRate, isBuyingSynthetic)
 
 	debuggingAmounts := &user.DebuggingAmounts{ //todo decimal?
 		CollateralAmount: decimal.NewFromBigInt(amounts.CollateralAmountInternal.ToStarkAmount(amounts.RoundingMode).Value, 0),

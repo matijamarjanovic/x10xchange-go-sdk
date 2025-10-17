@@ -19,7 +19,7 @@ type StarknetPerpetualAccount struct {
 	PrivateKey  *big.Int
 	PublicKey   *big.Int
 	APIKey      string
-	TradingFees map[string]user.Fee
+	TradingFees map[string]user.TradingFee
 }
 
 // NewStarknetAccountFromEnv creates a StarknetAccount by loading credentials from environment variables
@@ -69,7 +69,7 @@ func NewStarknetAccount() (*StarknetPerpetualAccount, error) {
 		PrivateKey:  privateKey,
 		PublicKey:   publicKey,
 		APIKey:      apiKey,
-		TradingFees: make(map[string]user.Fee),
+		TradingFees: make(map[string]user.TradingFee),
 	}, nil
 }
 

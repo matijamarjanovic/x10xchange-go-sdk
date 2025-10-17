@@ -37,7 +37,7 @@ type CreateOrderRequest struct {
 	Price                    string            `json:"price"`
 	TimeInForce              string            `json:"timeInForce"` // GTT | FOK | IOC
 	ExpiryEpochMillis        int64             `json:"expiryEpochMillis"`
-	Fee                      string            `json:"fee"`
+	Fee                      decimal.Decimal   `json:"fee"`
 	CancelID                 string            `json:"cancelId,omitempty"`
 	Settlement               Settlement        `json:"settlement"`
 	Nonce                    string            `json:"nonce"`

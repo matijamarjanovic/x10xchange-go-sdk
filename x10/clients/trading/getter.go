@@ -367,7 +367,7 @@ func (c *TradingClient) GetRebatesStats(ctx context.Context) ([]user.RebatesStat
 }
 
 // GetFees returns current fee rates for the sub-account; optionally filter by market and/or builderId.
-func (c *TradingClient) GetFees(ctx context.Context, market *string, builderID *string) ([]user.Fee, error) {
+func (c *TradingClient) GetFees(ctx context.Context, market *string, builderID *string) ([]user.TradingFee, error) {
 	base := "/user/fees"
 	q := url.Values{}
 	if market != nil && *market != "" {
@@ -382,8 +382,8 @@ func (c *TradingClient) GetFees(ctx context.Context, market *string, builderID *
 	}
 
 	var response struct {
-		Status string     `json:"status"`
-		Data   []user.Fee `json:"data"`
+		Status string            `json:"status"`
+		Data   []user.TradingFee `json:"data"`
 	}
 
 	if err := c.httpClient.Get(ctx, endpoint, &response); err != nil {
