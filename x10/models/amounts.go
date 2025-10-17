@@ -101,11 +101,3 @@ func NewStarkOrderAmounts(
 		RoundingMode:             roundingMode,
 	}
 }
-
-func ToStarkAmounts(amounts StarkOrderAmounts) (StarkAmount, StarkAmount, StarkAmount) {
-	collateralStark := amounts.CollateralAmountInternal.ToStarkAmount(amounts.RoundingMode)
-	syntheticStark := amounts.SyntheticAmountInternal.ToStarkAmount(amounts.RoundingMode)
-	feeStark := amounts.FeeAmountInternal.ToStarkAmount(RoundingModeFee)
-
-	return collateralStark, syntheticStark, feeStark
-}

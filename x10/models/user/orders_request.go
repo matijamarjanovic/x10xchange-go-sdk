@@ -1,5 +1,7 @@
 package user
 
+import "github.com/shopspring/decimal"
+
 type SettlementSignature struct {
 	R string `json:"r"`
 	S string `json:"s"`
@@ -52,9 +54,9 @@ type CreateOrderRequest struct {
 }
 
 type DebuggingAmounts struct {
-	CollateralAmount string `json:"collateralAmount"`
-	FeeAmount        string `json:"feeAmount"`
-	SyntheticAmount  string `json:"syntheticAmount"`
+	CollateralAmount decimal.Decimal `json:"collateralAmount"`
+	FeeAmount        decimal.Decimal `json:"feeAmount"`
+	SyntheticAmount  decimal.Decimal `json:"syntheticAmount"`
 }
 
 type CreateOrderResponse struct {

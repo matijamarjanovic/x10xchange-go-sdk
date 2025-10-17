@@ -19,7 +19,7 @@ const (
 )
 
 //todo: add godocs 
-func HashOrder(amounts models.StarkOrderAmounts, isBuyingSynthetic bool, expireAtMs int64, nonce int64, vaultID int) (*felt.Felt, error) {
+func HashOrder(amounts models.StarkOrderAmounts, isBuyingSynthetic bool, expireTime *time.Time, nonce int64, vaultID int) (*felt.Felt, error) {
 	syntheticStark := amounts.SyntheticAmountInternal.ToStarkAmount(amounts.RoundingMode)
 	collateralStark := amounts.CollateralAmountInternal.ToStarkAmount(amounts.RoundingMode)
 	feeStark := amounts.FeeAmountInternal.ToStarkAmount(models.RoundingModeFee)
@@ -41,7 +41,6 @@ func HashOrder(amounts models.StarkOrderAmounts, isBuyingSynthetic bool, expireA
 	collateralStarkBig := collateralStark.Value
 	feeStarkBig := feeStark.Value
 
-	expireTime := time.UnixMilli(expireAtMs)
 	expireTimeWithBuffer := expireTime.AddDate(0, 0, 14)
 	expireTimeInHours := int64(math.Ceil(float64(expireTimeWithBuffer.Unix()) / float64(SecondsInHour)))
 

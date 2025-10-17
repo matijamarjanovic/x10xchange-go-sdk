@@ -69,7 +69,7 @@ func CreateOrder(
 	)
 }
 
-//todo: add godocs + continue matching python sdk
+// todo: add godocs + continue matching python sdk
 func createOrder(
 	market *info.Market,
 	syntheticAmount decimal.Decimal,
@@ -111,8 +111,6 @@ func createOrder(
 		return nil, fmt.Errorf("failed to generate nonce: %w", err)
 	}
 
-	expireMs := expireTime.UnixMilli()
-
 	feeRate, err := decimal.NewFromString(fees.TakerFeeRate)
 	if err != nil {
 		return nil, fmt.Errorf("invalid fee rate: %w", err)
@@ -122,7 +120,13 @@ func createOrder(
 
 	amounts := models.NewStarkOrderAmounts(market, syntheticAmount, price, feeRate, isBuyingSynthetic)
 
-	orderHash, err := starknet.HashOrder(amounts, isBuyingSynthetic, expireMs, nonce, collateralPositionID)
+	debuggingAmounts := &user.DebuggingAmounts{ //todo decimal?
+		CollateralAmount: decimal.NewFromBigInt(amounts.CollateralAmountInternal.ToStarkAmount(amounts.RoundingMode).Value, 0),
+		FeeAmount:        decimal.NewFromBigInt(amounts.FeeAmountInternal.ToStarkAmount(amounts.RoundingMode).Value, 0),
+		SyntheticAmount:  decimal.NewFromBigInt(amounts.SyntheticAmountInternal.ToStarkAmount(amounts.RoundingMode).Value, 0),
+	}
+
+	orderHash, err := starknet.HashOrder(amounts, isBuyingSynthetic, expireTime, nonce, collateralPositionID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create order hash: %w", err)
 	}
@@ -145,15 +149,7 @@ func createOrder(
 	if orderExternalID != nil {
 		orderID = *orderExternalID
 	} else {
-		orderID = orderHash.String()
-	}
-
-	collateralStark, syntheticStark, feeStark := models.ToStarkAmounts(amounts)
-
-	debuggingAmounts := &user.DebuggingAmounts{
-		CollateralAmount: collateralStark.Value.String(),
-		FeeAmount:        feeStark.Value.String(),
-		SyntheticAmount:  syntheticStark.Value.String(),
+		orderID = ""
 	}
 
 	req := user.CreateOrderRequest{
@@ -165,7 +161,7 @@ func createOrder(
 		Price:                    price.String(),
 		PostOnly:                 postOnly,
 		TimeInForce:              *timeInForce,
-		ExpiryEpochMillis:        expireMs,
+		ExpiryEpochMillis:        expireTime.UnixMilli(),
 		Fee:                      fees.TakerFeeRate,
 		SelfTradeProtectionLevel: *selfTradeProtectionLevel,
 		Nonce:                    fmt.Sprintf("%d", nonce),
