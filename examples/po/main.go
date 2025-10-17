@@ -30,8 +30,8 @@ func main() {
 	// Test that the account was loaded correctly
 	account := tc.Account()
 	fmt.Printf("Testing order creation with embedded Starknet account:\n")
-	fmt.Printf("  Public Key: %s\n", account.GetPublicKeyHex())
-	fmt.Printf("  Vault ID: %s\n", account.GetVaultIDString())
+	fmt.Printf("  Public Key: %s\n", fmt.Sprintf("0x%x", account.PublicKey))
+	fmt.Printf("  Vault ID: %d\n", account.Vault)
 
 	// Test order creation parameters
 	market := "BTC-USD"
@@ -45,7 +45,7 @@ func main() {
 	fmt.Printf("  Side: BUY\n")
 
 	// Try to place a buy order
-	resp, err := tc.PlaceOrder(context.Background(), market, qty, price, "BUY")
+	resp, err := tc.PlaceOrder(context.Background(), market, qty, price, "BUY", nil)
 	if err != nil {
 		log.Printf("Order creation failed: %v", err)
 		return

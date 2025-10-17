@@ -29,7 +29,7 @@ type TradingConfig struct {
 	MaxLimitOrderValue  decimal.Decimal    `json:"maxLimitOrderValue"`
 	MaxPositionValue    decimal.Decimal    `json:"maxPositionValue"`
 	MaxLeverage         decimal.Decimal    `json:"maxLeverage"`
-	MaxNumOrders        int                `json:"maxNumOrders"`
+	MaxNumOrders        string             `json:"maxNumOrders"`
 	LimitPriceCap       decimal.Decimal    `json:"limitPriceCap"`
 	LimitPriceFloor     decimal.Decimal    `json:"limitPriceFloor"`
 	RiskFactorConfig    []RiskFactorConfig `json:"riskFactorConfig"`
