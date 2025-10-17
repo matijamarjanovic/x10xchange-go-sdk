@@ -18,7 +18,7 @@ type TradingClient struct {
 	*pub.PublicClient
 	httpClient *clients.HTTPClient
 	streaming  bool
-	account    *starknet.StarknetAccount // Embedded Starknet account for signing
+	account    *starknet.StarknetPerpetualAccount
 	markets    map[string]*info.Market   // Cached market data
 }
 
@@ -39,13 +39,11 @@ func NewTradingClient(cfg *x10.Config, enableStreaming bool) (*TradingClient, er
 	}, nil
 }
 
-// StreamingEnabled returns whether streaming features are enabled on this client.
 func (c *TradingClient) StreamingEnabled() bool {
 	return c.streaming
 }
 
-// GetAccount returns the embedded Starknet account
-func (c *TradingClient) Account() *starknet.StarknetAccount {
+func (c *TradingClient) Account() *starknet.StarknetPerpetualAccount {
 	return c.account
 }
 

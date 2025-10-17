@@ -28,7 +28,7 @@ func main() {
 	}
 
 	// Test that the account was loaded correctly
-	account := tc.GetAccount()
+	account := tc.Account()
 	fmt.Printf("Testing order creation with embedded Starknet account:\n")
 	fmt.Printf("  Public Key: %s\n", account.GetPublicKeyHex())
 	fmt.Printf("  Vault ID: %s\n", account.GetVaultIDString())

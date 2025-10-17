@@ -9,8 +9,7 @@ import (
 
 	felt "github.com/NethermindEth/juno/core/felt"
 	"github.com/NethermindEth/starknet.go/curve"
-	"github.com/matijamarjanovic/x10xchange-go-sdk/x10/models/info"
-	"github.com/shopspring/decimal"
+	"github.com/matijamarjanovic/x10xchange-go-sdk/x10/models"
 )
 
 const (
@@ -19,41 +18,28 @@ const (
 	SecondsInHour        = 60 * 60
 )
 
-// HashOrder constructs the canonical order hash from the provided market and order parameters.
-// It derives synthetic and collateral amounts in human units, computes the fee amount from feeRate,
-// converts these values to internal integers using the market resolutions, then packs fields and hashes them.
-// The feeRate is a decimal string (e.g., "0.0005" for 0.05%).
-func HashOrder(market *info.Market, side, qty, price, feeRate string, expireAtMs int64, nonce int64, vaultID int) (*felt.Felt, error) {
-	syntheticAssetID, collateralAssetID, syntheticResolution, collateralResolution, err := extractAssetData(market)
-	if err != nil {
-		return nil, fmt.Errorf("failed to extract asset data: %w", err)
+//todo: add godocs 
+func HashOrder(amounts models.StarkOrderAmounts, isBuyingSynthetic bool, expireAtMs int64, nonce int64, vaultID int) (*felt.Felt, error) {
+	syntheticStark := amounts.SyntheticAmountInternal.ToStarkAmount(amounts.RoundingMode)
+	collateralStark := amounts.CollateralAmountInternal.ToStarkAmount(amounts.RoundingMode)
+	feeStark := amounts.FeeAmountInternal.ToStarkAmount(models.RoundingModeFee)
+
+	syntheticAsset := syntheticStark.Asset
+	collateralAsset := collateralStark.Asset
+
+	syntheticAssetID, ok := new(big.Int).SetString(syntheticAsset.SettlementExternalID, 0)
+	if !ok {
+		return nil, fmt.Errorf("invalid synthetic asset ID: %s", syntheticAsset.SettlementExternalID)
 	}
 
-	qtyDecimal, err := decimal.NewFromString(qty)
-	if err != nil {
-		return nil, fmt.Errorf("invalid qty: %w", err)
-	}
-	priceDecimal, err := decimal.NewFromString(price)
-	if err != nil {
-		return nil, fmt.Errorf("invalid price: %w", err)
-	}
-	feeRateDec, err := decimal.NewFromString(feeRate)
-	if err != nil {
-		return nil, fmt.Errorf("invalid fee rate: %w", err)
+	collateralAssetID, ok := new(big.Int).SetString(collateralAsset.SettlementExternalID, 0)
+	if !ok {
+		return nil, fmt.Errorf("invalid collateral asset ID: %s", collateralAsset.SettlementExternalID)
 	}
 
-	qtyStark := qtyDecimal.Mul(decimal.NewFromInt(int64(syntheticResolution))).BigInt()
-
-	collateralAmountHuman := qtyDecimal.Mul(priceDecimal)
-	collateralStark := collateralAmountHuman.Mul(decimal.NewFromInt(int64(collateralResolution))).BigInt()
-
-	feeAmountHuman := feeRateDec.Mul(collateralAmountHuman)
-	feeStark := feeAmountHuman.Mul(decimal.NewFromInt(int64(collateralResolution))).BigInt()
-
-	if side != "BUY" && side != "SELL" {
-		return nil, fmt.Errorf("invalid side: %s, must be BUY or SELL", side)
-	}
-	isBuyingSynthetic := side == "BUY"
+	qtyStark := syntheticStark.Value
+	collateralStarkBig := collateralStark.Value
+	feeStarkBig := feeStark.Value
 
 	expireTime := time.UnixMilli(expireAtMs)
 	expireTimeWithBuffer := expireTime.AddDate(0, 0, 14)
@@ -67,8 +53,8 @@ func HashOrder(market *info.Market, side, qty, price, feeRate string, expireAtMs
 		isBuyingSynthetic,
 		collateralAssetID,
 		qtyStark,
-		collateralStark,
-		feeStark,
+		collateralStarkBig,
+		feeStarkBig,
 		nonce,
 		positionID,
 		expireTimeInHours,
@@ -80,7 +66,6 @@ func HashOrder(market *info.Market, side, qty, price, feeRate string, expireAtMs
 	return hash, nil
 }
 
-// getLimitOrderMsg packs the order fields and performs the pairwise Pedersen hash chaining.
 func getLimitOrderMsg(
 	assetIDSynthetic, assetIDCollateral *big.Int,
 	isBuyingSynthetic bool,

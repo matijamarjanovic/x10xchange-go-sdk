@@ -9,19 +9,21 @@ import (
 	felt "github.com/NethermindEth/juno/core/felt"
 	"github.com/NethermindEth/starknet.go/curve"
 	"github.com/matijamarjanovic/x10xchange-go-sdk/x10/models"
+	"github.com/matijamarjanovic/x10xchange-go-sdk/x10/models/user"
 )
 
 // StarknetAccount represents a Starknet account with signing capabilities
 // This is the Go equivalent of Python's StarkPerpetualAccount
-type StarknetAccount struct {
-	Vault      int
-	PrivateKey *big.Int
-	PublicKey  *big.Int
-	APIKey     string
+type StarknetPerpetualAccount struct {
+	Vault       int
+	PrivateKey  *big.Int
+	PublicKey   *big.Int
+	APIKey      string
+	TradingFees map[string]user.Fee
 }
 
 // NewStarknetAccountFromEnv creates a StarknetAccount by loading credentials from environment variables
-func NewStarknetAccount() (*StarknetAccount, error) {
+func NewStarknetAccount() (*StarknetPerpetualAccount, error) {
 	apiKey := os.Getenv("X10_API_KEY")
 	publicKeyHex := os.Getenv("X10_PUBLIC_KEY")
 	privateKeyHex := os.Getenv("X10_PRIVATE_KEY")
@@ -62,18 +64,19 @@ func NewStarknetAccount() (*StarknetAccount, error) {
 		}
 	}
 
-	return &StarknetAccount{
-		Vault:      vaultID,
-		PrivateKey: privateKey,
-		PublicKey:  publicKey,
-		APIKey:     apiKey,
+	return &StarknetPerpetualAccount{
+		Vault:       vaultID,
+		PrivateKey:  privateKey,
+		PublicKey:   publicKey,
+		APIKey:      apiKey,
+		TradingFees: make(map[string]user.Fee),
 	}, nil
 }
 
 // Sign signs a message hash using the account's private key
 // This is the Go equivalent of Python's account.sign() method
 // Returns r, s signature components as *big.Int for easy hex formatting
-func (a *StarknetAccount) Sign(msgHash *felt.Felt) (*big.Int, *big.Int, error) {
+func (a *StarknetPerpetualAccount) Sign(msgHash *felt.Felt) (*big.Int, *big.Int, error) {
 	privateKeyFelt := new(felt.Felt).SetBigInt(a.PrivateKey)
 	r, s, err := curve.SignFelts(msgHash, privateKeyFelt)
 	if err != nil {
@@ -82,14 +85,4 @@ func (a *StarknetAccount) Sign(msgHash *felt.Felt) (*big.Int, *big.Int, error) {
 	rBigInt := r.BigInt(new(big.Int))
 	sBigInt := s.BigInt(new(big.Int))
 	return rBigInt, sBigInt, nil
-}
-
-// GetPublicKeyHex returns the public key as a hex string
-func (a *StarknetAccount) GetPublicKeyHex() string {
-	return fmt.Sprintf("0x%x", a.PublicKey)
-}
-
-// GetVaultIDString returns the vault ID as a string
-func (a *StarknetAccount) GetVaultIDString() string {
-	return strconv.Itoa(a.Vault)
 }
