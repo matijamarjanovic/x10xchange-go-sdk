@@ -1,6 +1,6 @@
 # X10 Extended Exchange Go SDK
 
-DISCLAIMER: Existing GO packages don't implement RFC6979 signing as API server expects so development is paused until it becomes available.
+**DISCLAIMER**: Existing GO packages don't implement RFC6979 signing as API server expects so development is paused until it becomes available.
 Codebase contains Python SDK for easier development.
 
 A pure Go SDK for the X10 Extended Exchange API, providing comprehensive trading functionality for perpetual futures. This sdk is written to be as similar to [Extended Python SDK](https://github.com/x10xchange/python_sdk) as possible in terms of functionality and code architecure as much as the language difference allows it. 
