@@ -74,7 +74,8 @@ func NewStarknetAccount() (*StarknetPerpetualAccount, error) {
 }
 
 // Sign signs a message hash using the account's private key
-// This is the Go equivalent of Python's account.sign() method
+// NOTE: curve.SignFelts uses random k, not RFC6979 deterministic k like Python
+// This may cause signature mismatches with the Python SDK
 // Returns r, s signature components as *big.Int for easy hex formatting
 func (a *StarknetPerpetualAccount) Sign(msgHash *felt.Felt) (*big.Int, *big.Int, error) {
 	privateKeyFelt := new(felt.Felt).SetBigInt(a.PrivateKey)
